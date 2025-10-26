@@ -573,12 +573,11 @@ func (r *resticWrapper) runCommand(command string) error {
 		r.executionTime += summary.Duration
 		r.summary(r.command, summary, stderr, err)
 
-		if summary.Timestamp == "" {
-			hours := int(summary.Duration.Hours())
-			minutes := int(summary.Duration.Minutes()) % 60
-			seconds := int(summary.Duration.Seconds()) % 60
-			summary.Timestamp = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
-		}
+		// Populate Pretty fields with human-readable formats
+		summary.Pretty.Duration = formatDuration(summary.Duration)
+		summary.Pretty.BytesAdded = formatBytes(summary.BytesAdded)
+		summary.Pretty.BytesAddedPacked = formatBytes(summary.BytesAddedPacked)
+		summary.Pretty.BytesTotal = formatBytes(summary.BytesTotal)
 
 		r.backupSummary = &summary
 
@@ -975,4 +974,31 @@ func asExitError(err error) (*exec.ExitError, bool) {
 		return exitErr, true
 	}
 	return nil, false
+}
+
+// formatBytes formats bytes into a human-readable string (e.g., "10 MB", "1.5 GB")
+func formatBytes(bytes uint64) string {
+	const unit = 1024
+	if bytes < unit {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	div, exp := uint64(unit), 0
+	for n := bytes / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	units := []string{"KB", "MB", "GB", "TB", "PB", "EB"}
+	value := float64(bytes) / float64(div)
+	// Format with up to 2 decimal places, removing trailing zeros
+	formatted := fmt.Sprintf("%.2f", value)
+	formatted = strings.TrimRight(strings.TrimRight(formatted, "0"), ".")
+	return fmt.Sprintf("%s %s", formatted, units[exp])
+}
+
+// formatDuration formats a time.Duration into HH:MM:SS format
+func formatDuration(d time.Duration) string {
+	hours := int(d.Hours())
+	minutes := int(d.Minutes()) % 60
+	seconds := int(d.Seconds()) % 60
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
 }

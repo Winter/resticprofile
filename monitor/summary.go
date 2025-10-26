@@ -4,7 +4,6 @@ import "time"
 
 // Summary of the profile run
 type Summary struct {
-	Timestamp        string
 	Duration         time.Duration
 	FilesNew         int
 	FilesChanged     int
@@ -17,6 +16,13 @@ type Summary struct {
 	BytesAddedPacked uint64
 	BytesTotal       uint64
 	OutputAnalysis   OutputAnalysis
+
+	Pretty struct {
+		Duration         string
+		BytesAdded       string
+		BytesAddedPacked string
+		BytesTotal       string
+	}
 }
 
 // OutputAnalysis of the profile run
