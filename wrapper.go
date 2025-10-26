@@ -28,19 +28,20 @@ import (
 )
 
 type resticWrapper struct {
-	ctx      *Context
-	dryRun   bool // resticprofile dry-run (not restic dry-run via flags added on the command line)
-	noLock   bool
-	lockWait *time.Duration
-	profile  *config.Profile
-	global   *config.Global
-	command  string
-	moreArgs []string
-	sigChan  chan os.Signal
-	setPID   func(pid int32)
-	stdin    io.ReadCloser
-	progress []monitor.Receiver
-	sender   *hook.Sender
+	ctx           *Context
+	dryRun        bool // resticprofile dry-run (not restic dry-run via flags added on the command line)
+	noLock        bool
+	lockWait      *time.Duration
+	profile       *config.Profile
+	global        *config.Global
+	command       string
+	moreArgs      []string
+	sigChan       chan os.Signal
+	setPID        func(pid int32)
+	stdin         io.ReadCloser
+	progress      []monitor.Receiver
+	sender        *hook.Sender
+	backupSummary *monitor.Summary
 
 	// States
 	startTime     time.Time
@@ -544,8 +545,10 @@ func (r *resticWrapper) runCommand(command string) error {
 		rCommand := r.prepareCommand(command, args, true)
 
 		if command == constants.CommandBackup && r.profile.Backup != nil {
+			monitoring := r.profile.GetMonitoringSections(command)
+
 			// Add output scanners
-			if len(r.progress) > 0 {
+			if len(r.progress) > 0 || monitoring.SendAfter != nil {
 				if r.profile.Backup.ExtendedStatus {
 					rCommand.scanOutput = shell.ScanBackupJson
 				} else if !term.OsStdoutIsTerminal() {
@@ -569,6 +572,7 @@ func (r *resticWrapper) runCommand(command string) error {
 		summary, stderr, err := runShellCommand(rCommand)
 		r.executionTime += summary.Duration
 		r.summary(r.command, summary, stderr, err)
+		r.backupSummary = &summary
 
 		if err != nil && !r.canSucceedAfterError(command, err) {
 			retry, interruptedError := r.canRetryAfterError(command, summary)
@@ -779,6 +783,7 @@ func (r *resticWrapper) getContext() hook.Context {
 	return hook.Context{
 		ProfileName:    r.profile.Name,
 		ProfileCommand: r.command,
+		Summary:        r.backupSummary,
 	}
 }
 

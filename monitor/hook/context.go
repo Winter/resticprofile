@@ -1,6 +1,9 @@
 package hook
 
-import "github.com/creativeprojects/resticprofile/util/templates"
+import (
+	"github.com/creativeprojects/resticprofile/monitor"
+	"github.com/creativeprojects/resticprofile/util/templates"
+)
 
 type Context struct {
 	templates.DefaultData
@@ -9,6 +12,7 @@ type Context struct {
 	ProfileCommand string
 	Error          ErrorContext
 	Stdout         string
+	Summary        *monitor.Summary
 }
 
 type ErrorContext struct {
