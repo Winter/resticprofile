@@ -572,6 +572,14 @@ func (r *resticWrapper) runCommand(command string) error {
 		summary, stderr, err := runShellCommand(rCommand)
 		r.executionTime += summary.Duration
 		r.summary(r.command, summary, stderr, err)
+
+		if summary.Timestamp == "" {
+			hours := int(summary.Duration.Hours())
+			minutes := int(summary.Duration.Minutes()) % 60
+			seconds := int(summary.Duration.Seconds()) % 60
+			summary.Timestamp = fmt.Sprintf("%02d:%02d:%02d", hours, minutes, seconds)
+		}
+
 		r.backupSummary = &summary
 
 		if err != nil && !r.canSucceedAfterError(command, err) {
